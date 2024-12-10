@@ -37,6 +37,14 @@ def main(cfg: DictConfig):
 
     # Start Simulation
 
+    history = fl.simulation.start_simulation(
+            client_fn=client_fn,
+            num_clients=cfg.num_clients,
+            config=fl.server.ServerConfig(num_rounds=cfg.num_rounds),
+            strategy=strategy,
+            client_resources={'num_cpus': 2, 'num_gpus': 0.5},     # num_gpu -> fraction of gpu
+    )
+
 
 
 

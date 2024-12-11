@@ -1,112 +1,101 @@
 import torch
+import torch.nn as nn
+from transformers import BertModel
 
 
-class Net():
+class Net(nn.Module):
     ''' This represents the model we want to train, and which will be used
         for our federated learning
 
     '''
 
-    def __init(self, num_classes: int):
+    def __init__(self, num_classes: int):
         super(Net, self).__init__()
-        # Define layers etc.
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.dropout = nn.Dropout(0.3)
+        self.classifier = nn.Linear(self.bert.config.hidden_size, num_classes)
 
-        pass
 
 
-    def forward(self, x):
+    def forward(self, input_ids, attention_mask, token_type_ids):
         ''' Forward method for the model
 
             Args:
                 x: represents the training data(features)
         '''
+        # gets the embeddings from the pretrained bert model
+        outputs = self.bert(input_ids=input_ids,
+                            attention_mask=attention_mask,
+                            token_type_ids=token_type_ids
+        )
+        
+        # pooler output, represents the content of the 
+        # whole sequence (BERT specific [CLS] token, which can be
+        # seen as a summary)
+        pooled_output = outputs.pooler_output
+        dropout_output = self.dropout(pooled_output)
+        logits = self.classifier(dropout_output)
 
-        pass
+        return logits
 
 
 def train(net, trainloader, optimizer, epochs, device: str):
 
-    pass
+    criterion = torch.nn.CrossEntropyLoss()
+    net.train()
+    net.to(device)
+
+
+    for _ in range(epochs):
+        total_train_loss = 0
+        counter = 0
+
+        for batch in trainloader:
+            counter += 1 
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            token_type_ids = batch['token_type_ids'].to(device)
+
+            labels = batch['labels'].to(device)
+
+            optimizer.zero_grad()
+            outputs = net(input_ids, attention_mask, token_type_ids)
+            loss = criterion(outputs, labels)
+
+            loss.backward()
+
+            optimizer.step()
+            total_train_loss += loss.item()
+
 
 
 
 def test(net, testloader, device:str):
-
-    pass
-
-
-#########################################################################
-#
-# Example for CNN using Pytorch from
-# https://github.com/adap/flower/blob/main/examples/flower-simulation-step-by-step-pytorch/Part-I/model.py
-#
-#########################################################################
-
-
-'''
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-# Note the model and functions here defined do not have any FL-specific components.
-
-
-class Net(nn.Module):
-    """A simple CNN suitable for simple vision tasks."""
-
-    def __init__(self, num_classes: int) -> None:
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 4 * 4, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, num_classes)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 4 * 4)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-
-def train(net, trainloader, optimizer, epochs, device: str):
-    """Train the network on the training set.
-
-    This is a fairly simple training loop for PyTorch.
-    """
     criterion = torch.nn.CrossEntropyLoss()
-    net.train()
-    net.to(device)
-    for _ in range(epochs):
-        for images, labels in trainloader:
-            images, labels = images.to(device), labels.to(device)
-            optimizer.zero_grad()
-            loss = criterion(net(images), labels)
-            loss.backward()
-            optimizer.step()
-
-
-def test(net, testloader, device: str):
-    """Validate the network on the entire test set.
-
-    and report loss and accuracy.
-    """
-    criterion = torch.nn.CrossEntropyLoss()
-    correct, loss = 0, 0.0
+    correct_predictions, total_test_loss, total_predictions = 0, 0.0, 0
     net.eval()
     net.to(device)
+
     with torch.no_grad():
-        for data in testloader:
-            images, labels = data[0].to(device), data[1].to(device)
-            outputs = net(images)
-            loss += criterion(outputs, labels).item()
-            _, predicted = torch.max(outputs.data, 1)
-            correct += (predicted == labels).sum().item()
-    accuracy = correct / len(testloader.dataset)
-    return loss, accuracy
-'''    
+        for batch in testloader:
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            token_type_ids = batch['token_type_ids'].to(device)
+            labels = batch['labels'].to(device)
+
+            outputs = net(input_ids, attention_mask, token_type_ids)
+
+
+            loss = criterion(outputs, labels)
+            total_test_loss += loss.item()
+
+            _, predicted = torch.max(outputs, 1)
+            correct_predictions += (predicted == labels).sum().item()
+            total_predictions += labels.size(0)
+
+    accuracy = correct_predictions / len(testloader.dataset)
+    # accuracy = correct_predictions / total_predictions
+
+    return total_test_loss, accuracy
+
+  

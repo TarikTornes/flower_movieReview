@@ -1,7 +1,8 @@
 import os, re
 import pandas as pd
+import pickle
 
-def load_files(data_dir):
+def load_reviews(data_dir):
     reviews = []
     labels = []
     ids = []
@@ -50,7 +51,7 @@ def load_files(data_dir):
 
                 with open(os.path.join(neg_dir, file_name), 'r') as file:
                     reviews.append(file.read())
-                    labels.append(1)
+                    labels.append(0)
                     ids.append(review_id)
                     ratings.append(rating)
                     dict_neg[review_id] = (file.read(), rating)
@@ -89,6 +90,24 @@ class ReviewLoader:
     def get_reviews(self):
         return self.reviews
 
+if __name__=="__main__":
+    def pickle_dataframes(dic, file):
+        with open(file, 'wb') as f:
+            pickle.dump(dic, f)
+            print(f"Dict 1 pickled to {file}")
+
+    print("Starting")
+    rl_train = ReviewLoader("../../data/train/")
+    rl_test = ReviewLoader("../../data/test/")
+    df_train = rl_train.get_df()
+    df_test = rl_test.get_df()
+
+    dict_dfs = {"df_train": df_train, "df_test": df_test}
+    
+    pickle_dataframes(dict_dfs, "movieRev_dfs")
+
+
+    print("Ending")
         
 
 

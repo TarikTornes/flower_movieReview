@@ -36,7 +36,7 @@ def get_eval_fn(num_classes, testloader):
 
         if torch.cuda.is_available():
             device = "cuda"
-        elif torch.mps.is_available():
+        elif torch.backends.mps.is_available():
             device = "mps"
         else:
             device = "cpu"

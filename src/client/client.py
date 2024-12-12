@@ -1,7 +1,7 @@
 from flwr.common import NDArrays, Scalar
 import torch
 from collections import OrderedDict
-from ..model import Net, train, test
+from ..model.model import Net, train, test
 from typing import Dict, Tuple
 
 import flwr as fl
@@ -17,7 +17,7 @@ class FlowerClient(fl.client.NumPyClient):
 
         if torch.cuda.is_available():
             device = "cuda"
-        elif torch.mps.is_available():
+        elif torch.backends.mps.is_available():
             device = "mps"
         else:
             device = "cpu"
@@ -57,7 +57,8 @@ class FlowerClient(fl.client.NumPyClient):
         # Following is assumed that the weights of the model are in pytorch tensors
         # Thuc needs to adapt the following depending on the Net model
 
-        return [val.cpu().model().numpy() for _, val in self.model.state_dict().items()]
+        # return [val.cpu().model().numpy() for _, val in self.model.state_dict().items()]
+        return [val.detach().cpu().numpy() for _, val in self.model.state_dict().items()]
 
 
 
@@ -110,8 +111,8 @@ class FlowerClient(fl.client.NumPyClient):
 def generate_client_fn(trainloaders, valloaders, num_classes):
 
     def client_fn(client_id: str):
-        return FlowerClient(trainloader= trainloaders[int[client_id]],
-                            valloader=valloaders[int[client_id]],
+        return FlowerClient(trainloader= trainloaders[int(client_id)],
+                            valloader=valloaders[int(client_id)],
                             num_classes=num_classes)
 
 

@@ -1,4 +1,3 @@
-from .utils.reviewloader import ReviewLoader
 from .preprocessing.dataset import prepare_dataset
 from .client.client import generate_client_fn
 from .server.server import get_on_fit_config, get_eval_fn
@@ -16,10 +15,14 @@ def main(cfg: DictConfig):
     data = None
 
     # Prepare our dataset
-    trainloaders, validationloaders, testloader = prepare_dataset(data, cfg.num_clients, cfg.batch_size)
+    print("Retrieving data loaders ...")
+    trainloaders, validationloaders, testloader = prepare_dataset(cfg.num_clients, cfg.batch_size)
+    print("train, val and testloaders are loaded!")
 
     # Define clients
+    print("CLIENT_FN")
     client_fn = generate_client_fn(trainloaders, validationloaders, cfg.num_classes)
+    print("DONE")
 
 
     # Define the strategy to aggregate the weights
@@ -27,6 +30,7 @@ def main(cfg: DictConfig):
     # by default it is 1.0, we set it very small in order to use min_fit_clients parameter
     # since min_fit_clients will be taken if it is larger than fraction_fit * num_clients
     # therefore we set it very small
+    print("CREATING STRATEGY")
     strategy = fl.server.strategy.FedAvg(fraction_fit=0.000000001,
                                          min_fit_clients=cfg.num_clients_per_round_fit,
                                          fraction_evaluate=0.0000001,
@@ -34,16 +38,19 @@ def main(cfg: DictConfig):
                                          min_available_clients=cfg.num_clients,
                                          on_fit_config_fn=get_on_fit_config(cfg.config_fit),
                                          evaluate_fn=get_eval_fn(cfg.num_classes, testloader))
+    print("DONE")
 
     # Start Simulation
 
+    print("START SIMULATION")
     history = fl.simulation.start_simulation(
             client_fn=client_fn,
             num_clients=cfg.num_clients,
             config=fl.server.ServerConfig(num_rounds=cfg.num_rounds),
             strategy=strategy,
-            client_resources={'num_cpus': 2, 'num_gpus': 0.5},     # num_gpu -> fraction of gpu
+            client_resources={'num_cpus': 1, 'num_gpus': 0},     # num_gpu -> fraction of gpu
     )
+    print("DONE")
 
 
 

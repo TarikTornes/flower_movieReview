@@ -5,7 +5,7 @@ from transformers import BertTokenizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from torch.utils.data import random_split, DataLoader
-import torch, os, pickle
+import torch
 
 def get_dataset():
     '''This function will give us the dataset in a form that
@@ -56,7 +56,7 @@ def prepare_dataset(num_partitions: int,
         Return:
             trainloaders: list of dataloaders, for each client/partition one
             valloaders: list of validation set dataloaders, for each client one
-            valloaders: testset dataloader
+            testloaders: testset dataloader
     '''
 
     trainset, testset = get_dataset()
